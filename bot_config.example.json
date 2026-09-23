@@ -1,0 +1,14 @@
+{
+ "admins": [
+  "dogenerate"
+ ],
+ "admin_ids": [],
+ "active_layout": "newdefault1",
+ "allowed_layouts": [],
+ "lock_design": true,
+ "access": "public",
+ "allowed_users": [],
+ "stats": {
+  "cards": 0
+ }
+}

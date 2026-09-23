@@ -1,0 +1,141 @@
+{
+ "dexmoonTemplates": 1,
+ "templates": {
+  "newdefault1": {
+   "mode": "layout",
+   "saved": 1790144985239,
+   "config": {
+    "bg": {
+     "color": "#14101e",
+     "glow": "#241649"
+    },
+    "moon": {
+     "c0": "#efeafb",
+     "c1": "#cbbbf2",
+     "c2": "#a084e7",
+     "c3": "#6f44db",
+     "crater": "#9475e4"
+    },
+    "hero": {
+     "show": true,
+     "mode": "auto",
+     "heroScale": 2,
+     "pfpScale": 1,
+     "ring": "#a58ae8",
+     "ringW": -9,
+     "glowColor": "#8460e0",
+     "glowSize": 60,
+     "glowStrength": 0.9,
+     "pfpDx": -120,
+     "pfpDy": 10,
+     "shape": "auto",
+     "cx": 992,
+     "cy": 358,
+     "r": 231,
+     "glow": 0.55,
+     "edge": "#4c25af",
+     "uploadGlow": false,
+     "uploadEdge": false
+    },
+    "bgmoon": {
+     "show": true,
+     "dx": -175,
+     "dy": -165,
+     "r": 288,
+     "dim": 0.4,
+     "blur": 2
+    },
+    "icon": {
+     "show": true,
+     "x": 122,
+     "y": 112,
+     "size": 130
+    },
+    "wordmark": {
+     "show": true,
+     "style": "text",
+     "text": "DEXMOON",
+     "x": 1166,
+     "y": 19,
+     "h": 34,
+     "size": 54,
+     "spacing": 8,
+     "color": "#ffffff"
+    },
+    "label": {
+     "show": true,
+     "upper": true,
+     "x": 64,
+     "y": 208,
+     "size": 21,
+     "color": "#c1aeef",
+     "spacing": 2.6
+    },
+    "badge": {
+     "show": true,
+     "text": "DEX PAID",
+     "check": true,
+     "tracking": -3.2,
+     "wordgap": -16,
+     "x": 64,
+     "y": 229,
+     "h": 94,
+     "pad": 30,
+     "size": 72,
+     "color": "#ffffff",
+     "fill": "#5b2bd6"
+    },
+    "rows": {
+     "show": true,
+     "x": 64,
+     "vx": 214,
+     "y": 367,
+     "gap": 45,
+     "size": 23.4,
+     "key": "#ad95eb",
+     "val": "#ffffff",
+     "items": [
+      [
+       "Ticker"
+      ],
+      [
+       "Chain"
+      ],
+      [
+       "Updated"
+      ]
+     ]
+    },
+    "avatar": {
+     "show": true,
+     "shape": "circle",
+     "x": 64,
+     "y": 543,
+     "size": 46,
+     "radius": 6,
+     "fill": "#391e7e",
+     "ring": "#a58ae8",
+     "ringW": 0
+    },
+    "handle": {
+     "show": true,
+     "x": 122,
+     "y": 566,
+     "size": 25.2,
+     "color": "#ffffff"
+    },
+    "footer": {
+     "show": true,
+     "x": 64,
+     "y": 608,
+     "size": 15.4,
+     "site": "dexmoon.io",
+     "promo": "Save 10% on your update \u00b7 code ",
+     "color": "#9d9aa3",
+     "strong": "#ffffff",
+     "divider": "#3c3c40"
+    }
+   }
+  }
+ }
+}

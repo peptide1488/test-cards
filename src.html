@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dexmoon Card</title>
+<style>
+/*__FONTS__*/
+:root{--bg:#0d0c10;--panel:#17151c;--line:#2a2733;--ink:#ecebef;--mute:#9a96a3;--acc:#8b6bb3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,sans-serif;display:flex;min-height:100vh}
+#panel{width:360px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:14px 14px 40px;overflow:auto;height:100vh}
+#stageWrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:12px;min-width:0}
+canvas{max-width:100%;height:auto;border-radius:10px;box-shadow:0 10px 40px #0008;cursor:grab}
+h2{font:700 12px/1 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:18px 0 8px}
+details{border:1px solid var(--line);border-radius:8px;margin:6px 0;background:#1b1921}
+summary{cursor:pointer;padding:8px 10px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+summary input{margin:0}
+summary .rs{background:#26232e;border-radius:5px;padding:2px 7px;font-size:12px;margin-left:auto;margin-right:8px}
+.f{display:grid;grid-template-columns:78px 1fr;gap:6px;align-items:center;padding:4px 10px}
+.f label{color:var(--mute);font-size:12px}
+input[type=text],input[type=number],select,textarea{width:100%;background:#0f0e13;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:6px 7px;font:inherit}
+input[type=color]{width:100%;height:30px;background:none;border:1px solid var(--line);border-radius:6px;padding:0}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{background:var(--acc);color:#fff;border:0;border-radius:7px;padding:9px 14px;font-weight:600;cursor:pointer}
+button.ghost{background:#26232e}
+.hint{color:var(--mute);font-size:12px}
+.seg{display:flex;gap:4px}.seg button{flex:1;padding:6px 4px;font-size:12px;background:#26232e}.seg button.on{background:var(--acc)}
+.tpl{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin:5px 0;background:#1b1921}
+.tpl b{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tpl small{color:var(--mute);font-size:11px}
+.tpl button{padding:5px 9px;font-size:12px}
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px}
+.themes button{padding:6px 4px;font-size:11px;font-weight:600;border-radius:7px;display:flex;flex-direction:column;align-items:center;gap:4px;background:#1f1c26;border:1px solid var(--line)}
+.themes button.on{border-color:#fff}
+.themes i{display:block;width:100%;height:18px;border-radius:4px}
+.drop{display:flex;gap:12px;align-items:center;border:2px dashed #4a4257;border-radius:10px;padding:14px;margin:4px 0 8px;cursor:pointer;color:var(--mute);font-size:13px;background:#141219;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--acc);background:#1d1826;color:var(--ink)}
+.drop b{color:var(--ink)} .drop small{font-size:11px}
+#heroThumb{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:none;display:none;border:1px solid var(--line)}
+canvas.over{outline:3px dashed var(--acc);outline-offset:4px}
+@media (max-width:800px){body{flex-direction:column}#panel{width:100%;height:auto}}
+</style>
+</head>
+<body>
+<div id="panel">
+  <h2>Colour scheme</h2>
+  <div id="themes" class="themes"></div>
+  <div class="f"><label>Custom</label><input type="color" id="accentPick" value="#563f6d"></div>
+  <h2>Card info</h2>
+  <div class="f"><label>Link</label><input type="text" id="coinLink" placeholder="paste a dexscreener or coinmarketcap link"></div>
+  <div class="f"><label></label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="fillBtn">Fill from link</button>
+    <label class="hint" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="usePfp" checked> fill pfp circle</label><label class="hint" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="useLogo"> also use token logo as hero</label></div></div>
+  <div class="f"><label></label><span class="hint" id="fillMsg"></span></div>
+  <div id="quick"></div>
+  <h2>Images</h2>
+  <label id="heroDrop" class="drop"><input type="file" id="heroFile" accept="image/*" hidden>
+    <img id="heroThumb" alt=""><span id="heroMsg"><b>Hero image</b><br>drop an image here, click to browse, or paste (Ctrl+V)<br><small>auto-cropped to 1:1 and fitted into the moon slot</small></span></label>
+  <div class="f"><label>Mode</label><div class="seg" id="modeSeg">
+    <button data-m="auto">Auto</button><button data-m="hero" title="transparent PNG, large, free-standing">Hero (cut-out)</button><button data-m="pfp" title="any picture, round badge">PFP (round)</button></div></div>
+  <div class="f"><label>Hero size</label><div style="display:flex;gap:8px;align-items:center"><input type="range" id="heroSize" min="80" max="700" step="1" style="flex:1"><span id="heroSizeV" class="hint" style="width:38px;text-align:right"></span></div></div>
+  <div class="f"><label></label><span class="hint">or scroll the mouse wheel over the hero on the card</span></div>
+  <div class="f"><label></label><button class="ghost" id="heroReset">Use default moon</button></div>
+  <div class="f"><label>PFP</label><input type="file" id="avFile" accept="image/*"></div>
+  <h2>Elements</h2>
+  <div id="els"></div>
+  <h2>Saved templates</h2>
+  <div class="f"><label>Name</label><input type="text" id="tplName" placeholder="e.g. Solana green, big hero"></div>
+  <div class="f"><label>Save</label><div style="display:flex;flex-direction:column;gap:4px">
+    <label class="hint" style="display:flex;gap:6px;align-items:center"><input type="radio" name="tplMode" value="layout" checked> layout + colours only (keeps it reusable for any coin)</label>
+    <label class="hint" style="display:flex;gap:6px;align-items:center"><input type="radio" name="tplMode" value="full"> everything (incl. text + images)</label></div></div>
+  <div class="f"><label></label><div class="btns"><button id="tplSave">Save template</button><button class="ghost" id="tplSaveDl">Save + download .json</button></div></div>
+  <div id="tplList"></div>
+  <div class="btns" style="margin-top:8px"><button class="ghost" id="saveCfg">Export all (file)</button><button class="ghost" id="loadCfgBtn">Import file</button><input type="file" id="loadCfg" accept=".json" hidden><button class="ghost" id="resetAll">Reset everything</button></div>
+  <p class="hint">Templates are saved in this browser. To send one to the admin: <b>Save + download .json</b> (or ⬇ on a saved one) and send that file - the admin forwards it to the Telegram bot, then <code>/use name</code>. Use Export to back them up or send them to someone (Import loads them back). A template file in the tool's <code>presets</code> folder can be used by the Telegram bot with a <code>Layout: name</code> line.</p>
+  <p class="hint">Click anything on the card, then drag a corner handle to resize it. Transparent parts of the hero are click-through, so you can grab the moon behind it; Alt+click cycles through stacked elements; arrow keys nudge the selected element (Shift = 10px). You can also drop a hero image straight onto the card. Drag any element on the card to move it. Every element can be hidden, moved, resized and recoloured below.</p>
+</div>
+<div id="stageWrap">
+  <canvas id="cv" width="2400" height="1350"></canvas>
+  <div class="btns"><button id="dl">Download PNG</button><select id="exScale" style="width:auto"><option value="2">2400x1350 (2x, sharpest)</option><option value="1">1200x675 (1x)</option></select><button class="ghost" id="resetPos">↺ Reset positions</button><button class="ghost" id="nowBtn">Set date/time to now (UTC)</button></div>
+</div>
+<script>
+const LOGO_ICON='logo_icon.png', LOGO_LOCKUP='logo_lockup.png';
+const W=1200,H=675;
+// ---- the template, element by element (positions measured off the client's reference card) ----
+const DEFAULT={
+  bg:{color:'#0f0e12', glow:'#2a2236'},
+  moon:{c0:'#ece8f6', c1:'#cbc2dd', c2:'#a497ba', c3:'#7c6c97', crater:'#8f82a9'},
+  hero:{show:true, mode:'auto', heroScale:1.2, pfpScale:0.8, ring:'#b79ae0', ringW:10, glowColor:'#9d7ad6', glowSize:60, glowStrength:0.9, pfpDx:-120, pfpDy:10, shape:'auto', cx:1030, cy:390, r:330, glow:0.55, edge:'#5b4a78', uploadGlow:false, uploadEdge:false},  // STANDARD hero slot = a 1:1 square (600x600) around (cx,cy); every upload is centre-cropped to 1:1 and fitted into it; shape circle|square
+  bgmoon:{show:true, dx:-175, dy:-165, r:185, dim:0.4, blur:2},   // 'distant' moon behind + up-left of an uploaded hero (offset from the hero centre, so it follows the hero)
+  icon:{show:true, x:96, y:88, size:44},
+  wordmark:{show:true, style:'text', text:'DEXMOON', x:1130, y:70, h:34, size:36, spacing:8, color:'#ffffff'},   // style lockup = the logo PNG, text = template-style type                                     // right-aligned logo lockup
+  label:{show:true, text:'[TOKEN NAME]', upper:true, x:64, y:208, size:21, color:'#a29eab', spacing:2.6},
+  badge:{show:true, text:'DEX PAID', check:true, tracking:-3.2, wordgap:-16, x:64, y:229, h:94, pad:30, size:72, color:'#ffffff', fill:'#563f6d'},
+  rows:{show:true, x:64, vx:214, y:367, gap:45, size:23.4, key:'#8a8691', val:'#ffffff',
+        items:[['Ticker','$[TICKER]'],['Chain','[CHAIN]'],['Updated','[DATE] · [TIME] UTC']]},
+  avatar:{show:true, shape:'circle', x:64, y:543, size:46, radius:6, fill:'#34204a', ring:'#b79ae0', ringW:2.5},   // pfp slot (circle by default, any image)
+  handle:{show:true, text:'@[HANDLE]', x:122, y:566, size:25.2, color:'#ffffff'},
+  footer:{show:true, x:64, y:608, size:15.4, site:'dexmoon.io', promo:'Save 10% on your update · code ', code:'[REFCODE]', color:'#9d9aa3', strong:'#ffffff', divider:'#3c3c40'},
+};
+// Locked house layout 'newdefault1' (user 2026-09-23): merged over the template defaults, so Reset / Reset positions return here
+const LOCKED_TEMPLATE={"bg": {"color": "#14101e", "glow": "#241649"}, "moon": {"c0": "#efeafb", "c1": "#cbbbf2", "c2": "#a084e7", "c3": "#6f44db", "crater": "#9475e4"}, "hero": {"show": true, "mode": "auto", "heroScale": 2, "pfpScale": 1, "ring": "#a58ae8", "ringW": -9, "glowColor": "#8460e0", "glowSize": 60, "glowStrength": 0.9, "pfpDx": -120, "pfpDy": 10, "shape": "auto", "cx": 992, "cy": 358, "r": 231, "glow": 0.55, "edge": "#4c25af", "uploadGlow": false, "uploadEdge": false}, "bgmoon": {"show": true, "dx": -175, "dy": -165, "r": 288, "dim": 0.4, "blur": 2}, "icon": {"show": true, "x": 122, "y": 112, "size": 130}, "wordmark": {"show": true, "style": "text", "text": "DEXMOON", "x": 1166, "y": 19, "h": 34, "size": 54, "spacing": 8, "color": "#ffffff"}, "label": {"show": true, "upper": true, "x": 64, "y": 208, "size": 21, "color": "#c1aeef", "spacing": 2.6}, "badge": {"show": true, "text": "DEX PAID", "check": true, "tracking": -3.2, "wordgap": -16, "x": 64, "y": 229, "h": 94, "pad": 30, "size": 72, "color": "#ffffff", "fill": "#5b2bd6"}, "rows": {"show": true, "x": 64, "vx": 214, "y": 367, "gap": 45, "size": 23.4, "key": "#ad95eb", "val": "#ffffff", "items": [["Ticker"], ["Chain"], ["Updated"]]}, "avatar": {"show": true, "shape": "circle", "x": 64, "y": 543, "size": 46, "radius": 6, "fill": "#391e7e", "ring": "#a58ae8", "ringW": 0}, "handle": {"show": true, "x": 122, "y": 566, "size": 25.2, "color": "#ffffff"}, "footer": {"show": true, "x": 64, "y": 608, "size": 15.4, "site": "dexmoon.io", "promo": "Save 10% on your update · code ", "color": "#9d9aa3", "strong": "#ffffff", "divider": "#3c3c40"}};
+deepMerge(DEFAULT,JSON.parse(JSON.stringify(LOCKED_TEMPLATE)));
+let C=JSON.parse(JSON.stringify(DEFAULT));
+const IM={icon:null,lockup:null,hero:null,avatar:null};
+function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});}
+
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const SCALE=2;   // draw in 1200x675 units on a 2x backing store -> crisp logos/text; export 2x (default) or 1x
+const HQ=new Map();   // stepped (halving) downscale cache: big logos drawn small stay sharp instead of aliasing
+function hq(img,w,h){w=Math.round(w*SCALE);h=Math.round(h*SCALE);const key=img.src.length+':'+img.width+':'+w+'x'+h;if(HQ.has(key))return HQ.get(key);
+  let c=img,cw=img.width,ch=img.height;
+  while(cw/2>=w&&ch/2>=h){const n=document.createElement('canvas');n.width=cw=Math.round(cw/2);n.height=ch=Math.round(ch/2);const x=n.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(c,0,0,cw,ch);c=n;}
+  const o=document.createElement('canvas');o.width=w;o.height=h;const x=o.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(c,0,0,w,h);HQ.set(key,o);return o;}
+let boxes={};  // element -> [x,y,w,h] for dragging
+let SEL=null;   // selected element (outline shown in the editor only, never in exports)
+
+function spaced(t,x,y,sp){for(const ch of t){ctx.fillText(ch,x,y);x+=ctx.measureText(ch).width+sp;}return x;}
+function spacedW(t,sp){let w=0;for(const ch of t)w+=ctx.measureText(ch).width+sp;return w-sp;}
+
+function drawMoon(h){
+  const {cx,cy,r}=h; ctx.save();
+  let g=ctx.createRadialGradient(cx-r*.18,cy-r*.28,r*.05,cx,cy,r);
+  const M=C.moon;g.addColorStop(0,M.c0);g.addColorStop(.45,M.c1);g.addColorStop(.8,M.c2);g.addColorStop(1,M.c3);
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.fill();
+  const craters=[[.02,-.48,.127],[-.48,-.1,.082],[.28,.02,.055],[-.27,.42,.18]];   // measured off the template
+  for(const [dx,dy,cr] of craters){
+    const x=cx+dx*r,y=cy+dy*r,rr=cr*r;
+    let cg=ctx.createRadialGradient(x-rr*.3,y-rr*.35,rr*.1,x,y,rr);
+    cg.addColorStop(0,M.crater+'8c');cg.addColorStop(1,M.crater+'e6');
+    ctx.fillStyle=cg;ctx.beginPath();ctx.arc(x,y,rr,0,7);ctx.fill();
+  }
+  ctx.restore();
+}
+const ALPHA=new WeakMap();   // does the image have real transparency? (corners + edges sampled)
+function hasAlpha(img){if(ALPHA.has(img))return ALPHA.get(img);const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.drawImage(img,0,0,64,64);
+  let d;try{d=x.getImageData(0,0,64,64).data;}catch(e){ALPHA.set(img,false);return false;}
+  let t=0,n=0;for(let i=0;i<64;i++)for(const [u,v] of [[i,0],[i,63],[0,i],[63,i]]){n++;if(d[(v*64+u)*4+3]<200)t++;}
+  const r=t/n>0.3;ALPHA.set(img,r);return r;}
+function heroMode(){const h=C.hero;if(!IM.hero)return 'moon';if(h.mode==='hero'||h.mode==='pfp')return h.mode;return hasAlpha(IM.hero)?'hero':'pfp';}
+function drawHero(){
+  const h0=C.hero; if(!h0.show)return;
+  const _m=heroMode(); const h=Object.assign({},h0,{r:h0.r*(_m==='hero'?h0.heroScale:_m==='pfp'?h0.pfpScale:1),cx:h0.cx+(_m==='pfp'?h0.pfpDx:0),cy:h0.cy+(_m==='pfp'?h0.pfpDy:0)});   // PFP badge sits a bit left so ring+glow stay on the card
+  // glow
+  if(!IM.hero||h.uploadGlow){   // purple glow = moon only by default (it haloed uploaded characters)
+  let g=ctx.createRadialGradient(h.cx,h.cy,h.r*.8,h.cx,h.cy,h.r*1.45);
+  g.addColorStop(0,`rgba(120,100,160,${h.glow*.5})`);g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
+  const bm=C.bgmoon;
+  if(IM.hero&&bm.show){   // layer 1: the moon, pushed back - smaller, softened, dimmed toward the background colour
+    const mc={cx:h.cx+bm.dx,cy:h.cy+bm.dy,r:bm.r};ctx.save();ctx.filter=`blur(${bm.blur}px)`;drawMoon(mc);ctx.filter='none';
+    ctx.globalAlpha=bm.dim;ctx.fillStyle=C.bg.color;ctx.beginPath();ctx.arc(mc.cx,mc.cy,bm.r+1,0,7);ctx.fill();ctx.restore();
+    boxes.bgmoon=[mc.cx-bm.r,mc.cy-bm.r,2*bm.r,2*bm.r];}
+  if(IM.hero&&heroMode()==='pfp'&&h.glowSize>0){ctx.save();ctx.shadowColor=h.glowColor;ctx.shadowBlur=h.glowSize*SCALE;ctx.globalAlpha=h.glowStrength;
+    ctx.fillStyle=h.glowColor;for(let k=0;k<2;k++){ctx.beginPath();ctx.arc(h.cx,h.cy,h.r,0,7);ctx.fill();}ctx.restore();}
+  ctx.save();ctx.beginPath();const pm=heroMode();if(IM.hero&&pm==='hero')ctx.rect(h.cx-h.r,h.cy-h.r,2*h.r,2*h.r);else ctx.arc(h.cx,h.cy,h.r,0,7);ctx.clip();
+  if(IM.hero){ // centre-crop the upload to 1:1, then fill the standard square slot
+    const i=IM.hero,m=Math.min(i.width,i.height);
+    ctx.drawImage(i,(i.width-m)/2,(i.height-m)/2,m,m,h.cx-h.r,h.cy-h.r,2*h.r,2*h.r);
+    if(h.uploadEdge){let e=ctx.createRadialGradient(h.cx,h.cy,h.r*.72,h.cx,h.cy,h.r);  // same soft purple edge as the moon, so uploads match the set
+    e.addColorStop(0,'rgba(0,0,0,0)');e.addColorStop(1,h.edge+'cc');ctx.fillStyle=e;ctx.fillRect(h.cx-h.r,h.cy-h.r,2*h.r,2*h.r);}
+  } else drawMoon(h);
+  ctx.restore();
+  if(IM.hero&&heroMode()==='pfp'&&h.ringW>0){ctx.strokeStyle=h.ring;ctx.lineWidth=h.ringW;ctx.beginPath();ctx.arc(h.cx,h.cy,h.r-h.ringW/2+1,0,7);ctx.stroke();}
+  boxes.hero=[h.cx-h.r,h.cy-h.r,2*h.r,2*h.r];
+  window._heroDrawn=h;
+}
+function render(){
+  ctx.setTransform(SCALE,0,0,SCALE,0,0);ctx.imageSmoothingQuality='high';
+  boxes={};
+  ctx.fillStyle=C.bg.color;ctx.fillRect(0,0,W,H);
+  let bgl=ctx.createRadialGradient(C.hero.cx,C.hero.cy,50,C.hero.cx,C.hero.cy,900);bgl.addColorStop(0,C.bg.glow);bgl.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=bgl;ctx.fillRect(0,0,W,H);
+  drawHero();
+  const ic=C.icon; if(ic.show&&IM.icon){const w=ic.size*IM.icon.width/IM.icon.height;ctx.drawImage(hq(IM.icon,w,ic.size),ic.x-w/2,ic.y-ic.size/2,w,ic.size);boxes.icon=[ic.x-w/2,ic.y-ic.size/2,w,ic.size];}
+  const wm=C.wordmark; if(wm.show&&wm.style==='text'){ctx.textBaseline='middle';ctx.font=`700 ${wm.size}px 'IBM Plex Mono'`;ctx.fillStyle=wm.color;const w=spacedW(wm.text,wm.spacing);spaced(wm.text,wm.x-w,wm.y+wm.size/2,wm.spacing);boxes.wordmark=[wm.x-w,wm.y,w,wm.size];}
+  else if(wm.show&&IM.lockup){const w=wm.h*IM.lockup.width/IM.lockup.height;ctx.drawImage(hq(IM.lockup,w,wm.h),wm.x-w,wm.y,w,wm.h);boxes.wordmark=[wm.x-w,wm.y,w,wm.h];}
+  ctx.textBaseline='middle';
+  const lb=C.label; if(lb.show){ctx.font=`500 ${lb.size}px Inter`;ctx.fillStyle=lb.color;const lt=lb.upper?lb.text.toUpperCase():lb.text;const w=spacedW(lt,lb.spacing);spaced(lt,lb.x,lb.y,lb.spacing);boxes.label=[lb.x,lb.y-lb.size/2,w,lb.size];}
+  const b=C.badge; if(b.show){
+    ctx.font=`700 ${b.size}px 'IBM Plex Mono'`;ctx.letterSpacing=b.tracking+'px';ctx.wordSpacing=(b.wordgap||0)+'px';const tw=ctx.measureText(b.text).width, ck=b.check?b.size*.72:0;
+    const bw=b.pad+ck+tw+b.pad; ctx.fillStyle=b.fill;ctx.fillRect(b.x,b.y,bw,b.h);
+    const my=b.y+b.h/2; let x=b.x+b.pad;
+    if(b.check){ctx.strokeStyle=b.color;ctx.lineWidth=b.size*.075;ctx.lineCap='round';ctx.lineJoin='round';const s=b.size*.34;
+      ctx.beginPath();ctx.moveTo(x,my);ctx.lineTo(x+s*.38,my+s*.36);ctx.lineTo(x+s,my-s*.38);ctx.stroke();x+=ck;}
+    ctx.fillStyle=b.color;ctx.fillText(b.text,x,my+b.size*.04);ctx.letterSpacing='0px';ctx.wordSpacing='0px';boxes.badge=[b.x,b.y,bw,b.h];}
+  const r=C.rows; if(r.show){ctx.font=`400 ${r.size}px Inter`;r.items.forEach(([k,v],i)=>{const y=r.y+i*r.gap;
+      ctx.fillStyle=r.key;ctx.font=`400 ${r.size}px Inter`;ctx.fillText(k,r.x,y);ctx.fillStyle=r.val;ctx.font=`500 ${r.size}px Inter`;ctx.fillText(v,r.vx,y);});
+    boxes.rows=[r.x,r.y-r.size,r.vx-r.x+360,r.gap*(r.items.length-1)+r.size*2];}
+  const a=C.avatar; if(a.show){ctx.save();ctx.beginPath();if(a.shape==='circle')ctx.arc(a.x+a.size/2,a.y+a.size/2,a.size/2,0,7);else ctx.roundRect(a.x,a.y,a.size,a.size,a.radius);ctx.clip();
+      if(IM.avatar){const i=IM.avatar,s=Math.max(a.size/i.width,a.size/i.height);ctx.drawImage(i,a.x+(a.size-i.width*s)/2,a.y+(a.size-i.height*s)/2,i.width*s,i.height*s);}
+      else{ctx.fillStyle=a.fill;ctx.fillRect(a.x,a.y,a.size,a.size);} ctx.restore();
+      if(a.ringW>0){ctx.strokeStyle=a.ring;ctx.lineWidth=a.ringW;ctx.beginPath();if(a.shape==='circle')ctx.arc(a.x+a.size/2,a.y+a.size/2,a.size/2,0,7);else ctx.roundRect(a.x,a.y,a.size,a.size,a.radius);ctx.stroke();}
+      boxes.avatar=[a.x,a.y,a.size,a.size];}
+  const hd=C.handle; if(hd.show){ctx.font=`700 ${hd.size}px Inter`;ctx.fillStyle=hd.color;ctx.fillText(hd.text,hd.x,hd.y);boxes.handle=[hd.x,hd.y-hd.size/2,ctx.measureText(hd.text).width,hd.size];}
+  const f=C.footer; if(f.show){ctx.font=`400 ${f.size}px Inter`;let x=f.x;ctx.fillStyle=f.color;ctx.fillText(f.site,x,f.y);x+=ctx.measureText(f.site).width+18;
+      ctx.fillStyle=f.divider;ctx.fillText('|',x,f.y);x+=ctx.measureText('|').width+18;ctx.fillStyle=f.color;ctx.fillText(f.promo,x,f.y);x+=ctx.measureText(f.promo).width;
+      ctx.font=`700 ${f.size}px Inter`;ctx.fillStyle=f.strong;ctx.fillText(f.code,x,f.y);x+=ctx.measureText(f.code).width;boxes.footer=[f.x,f.y-f.size/2-2,x-f.x,f.size+4];}
+  if(SEL&&boxes[SEL]){const [x,y,w,h]=boxes[SEL];ctx.save();ctx.setLineDash([8,6]);ctx.lineWidth=2;ctx.strokeStyle='#b48cff';ctx.strokeRect(x-6,y-6,w+12,h+12);
+    ctx.setLineDash([]);ctx.fillStyle='#ffffff';ctx.strokeStyle='#8b6bb3';ctx.lineWidth=2;
+    for(const [hx,hy] of handlePts(SEL)){ctx.fillRect(hx-9,hy-9,18,18);ctx.strokeRect(hx-9,hy-9,18,18);}ctx.restore();}
+}
+function exportURL(scale){const s=SEL;SEL=null;render();let u;
+  if((scale||exportScale())===2)u=cv.toDataURL('image/png');
+  else{const o=document.createElement('canvas');o.width=W;o.height=H;const x=o.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(cv,0,0,W,H);u=o.toDataURL('image/png');}
+  SEL=s;render();return u;}
+function exportScale(){const e=document.getElementById('exScale');return e?parseInt(e.value):2;}
+
+// ---------------- panel ----------------
+const quick=[['Token name','label','text'],['Headline','badge','text'],['Ticker','rows',0],['Chain','rows',1],['Updated','rows',2],['Handle','handle','text'],['Ref code','footer','code']];
+const EL={bgmoon:'Background moon (behind an uploaded hero)',moon:'Moon colours',icon:'Top-left icon',wordmark:'Logo (top-right)',label:'Token name label',badge:'Headline badge',rows:'Info rows',avatar:'PFP circle',handle:'Handle',footer:'Footer',hero:'Hero image (standard circle)',bg:'Background'};
+function field(lbl,input){const d=document.createElement('div');d.className='f';d.innerHTML=`<label>${lbl}</label>`;d.appendChild(input);return d;}
+function mk(obj,key,onch){const v=obj[key];let i;
+  if(typeof v==='boolean'){i=document.createElement('input');i.type='checkbox';i.checked=v;i.onchange=()=>{obj[key]=i.checked;onch();};}
+  else if(typeof v==='number'){i=document.createElement('input');i.type='number';i.step=key==='glow'?0.05:1;i.value=v;i.oninput=()=>{obj[key]=parseFloat(i.value)||0;onch();};}
+  else if(/^#[0-9a-f]{6}$/i.test(v)){i=document.createElement('input');i.type='color';i.value=v;i.oninput=()=>{obj[key]=i.value;onch();};}
+  else if(key==='style'){i=document.createElement('select');for(const o of ['lockup','text']){const op=document.createElement('option');op.value=op.textContent=o;i.appendChild(op);}i.value=v;i.onchange=()=>{obj[key]=i.value;onch();};}
+  else if(key==='mode'){i=document.createElement('select');for(const o of ['auto','hero','pfp']){const op=document.createElement('option');op.value=op.textContent=o;i.appendChild(op);}i.value=v;i.onchange=()=>{obj[key]=i.value;syncMode();onch();};}
+  else if(key==='shape'){i=document.createElement('select');for(const o of (obj===C.avatar?['circle','square']:(key==='mode'?['auto','hero','pfp']:['auto','circle','square']))){const op=document.createElement('option');op.value=op.textContent=o;i.appendChild(op);}i.value=v;i.onchange=()=>{obj[key]=i.value;onch();};}
+  else{i=document.createElement('input');i.type='text';i.value=v;i.oninput=()=>{obj[key]=i.value;onch();};}
+  i.dataset.k=key;return i;}
+function buildPanel(){
+  const q=document.getElementById('quick');q.innerHTML='';
+  for(const [lbl,el,k] of quick){const i=document.createElement('input');i.type='text';
+    if(el==='rows'){i.value=C.rows.items[k][1];i.oninput=()=>{C.rows.items[k][1]=i.value;render();};}
+    else{i.value=C[el][k];i.oninput=()=>{C[el][k]=i.value;render();buildEls();};}
+    q.appendChild(field(lbl,i));}
+  buildEls();}
+function buildEls(){syncHeroSize();
+  const box=document.getElementById('els');const open=[...box.querySelectorAll('details[open]')].map(d=>d.dataset.el);box.innerHTML='';
+  for(const [el,name] of Object.entries(EL)){const o=C[el],d=document.createElement('details');d.dataset.el=el;if(open.includes(el))d.open=true;
+    const s=document.createElement('summary');s.textContent=name;s.addEventListener('click',()=>{if(boxes[el]){SEL=el;render();}});
+    {const rb=document.createElement('button');rb.className='rs';rb.textContent='↺';rb.title='Reset this element';rb.onclick=e=>{e.preventDefault();e.stopPropagation();resetEl(el);};s.appendChild(rb);}
+    if('show' in o){const cb=mk(o,'show',render);cb.onclick=e=>e.stopPropagation();s.appendChild(cb);} d.appendChild(s);
+    for(const k of Object.keys(o)){if(k==='show'||k==='items')continue;d.appendChild(field(k,mk(o,k,render)));}
+    if(el==='rows')o.items.forEach((it,n)=>{const a=document.createElement('input');a.type='text';a.value=it[0];a.oninput=()=>{it[0]=a.value;render();};
+      const b=document.createElement('input');b.type='text';b.value=it[1];b.oninput=()=>{it[1]=b.value;render();buildPanelQuickOnly();};d.appendChild(field('row '+(n+1)+' key',a));d.appendChild(field('row '+(n+1)+' val',b));});
+    box.appendChild(d);}}
+const POS=['x','y','vx','cx','cy','r','dx','dy','dim','blur','size','h','gap','pad','spacing','tracking','wordgap'];   // layout keys = what dragging/resizing changes
+function resetEl(el){const d=DEFAULT[el];for(const k of POS)if(k in d)C[el][k]=d[k];render();buildEls();}
+document.getElementById('resetPos').onclick=()=>{for(const el in DEFAULT)resetEl(el);};
+function syncMode(){document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===C.hero.mode));
+  const m=document.getElementById('heroMsg');if(m&&IM.hero){const hm=heroMode();m.querySelector('small').textContent=hm==='hero'?'Hero mode: transparent cut-out, shown large':'PFP mode: shown in a round badge (upload a transparent PNG for Hero mode)';}}
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{C.hero.mode=b.dataset.m;syncMode();render();buildEls();});
+function syncHeroSize(){syncMode();const r=Math.round(C.hero.r);const el=document.getElementById('heroSize');if(el){el.value=r;document.getElementById('heroSizeV').textContent=Math.round(r/330*100)+'%';}}
+function setHeroR(r){C.hero.r=Math.max(40,Math.min(900,r));syncHeroSize();render();}
+document.getElementById('heroSize').oninput=e=>setHeroR(parseFloat(e.target.value));
+document.getElementById('heroSize').onchange=()=>buildEls();
+cv.addEventListener('wheel',e=>{const b=boxes.hero;if(!b)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
+  if(x<b[0]||x>b[0]+b[2]||y<b[1]||y>b[1]+b[3]){const m=boxes.bgmoon;if(m&&x>=m[0]&&x<=m[0]+m[2]&&y>=m[1]&&y<=m[1]+m[3]){e.preventDefault();C.bgmoon.r=Math.max(40,C.bgmoon.r*(e.deltaY<0?1.05:1/1.05));SEL='bgmoon';render();}return;}e.preventDefault();setHeroR(C.hero.r*(e.deltaY<0?1.05:1/1.05));SEL='hero';render();clearTimeout(window._wt);window._wt=setTimeout(buildEls,300);},{passive:false});
+function buildPanelQuickOnly(){const ins=document.querySelectorAll('#quick input');quick.forEach(([l,el,k],n)=>{ins[n].value=el==='rows'?C.rows.items[k][1]:C[el][k];});}
+
+// drag to move
+let drag=null;
+function pt(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];}
+let heroMask=null;   // alpha of the hero as drawn in its slot (rebuilt when the image changes)
+function heroOpaque(x,y){const h=window._heroDrawn||C.hero;if(!IM.hero)return true;
+  if(!heroMask||heroMask.src!==IM.hero){const c=document.createElement('canvas');c.width=c.height=256;const m=Math.min(IM.hero.width,IM.hero.height);
+    c.getContext('2d').drawImage(IM.hero,(IM.hero.width-m)/2,(IM.hero.height-m)/2,m,m,0,0,256,256);heroMask={src:IM.hero,d:c.getContext('2d').getImageData(0,0,256,256).data};}
+  const u=Math.floor((x-(h.cx-h.r))/(2*h.r)*256),v=Math.floor((y-(h.cy-h.r))/(2*h.r)*256);if(u<0||v<0||u>255||v>255)return false;return heroMask.d[(v*256+u)*4+3]>40;}
+function hit(k,x,y){const b=boxes[k];if(!b||x<b[0]||x>b[0]+b[2]||y<b[1]||y>b[1]+b[3])return false;
+  if(k==='bgmoon'){const r=b[2]/2;return (x-b[0]-r)**2+(y-b[1]-r)**2<=r*r;}
+  if(k==='hero')return heroOpaque(x,y);return true;}
+let cycle={x:-1,y:-1,i:0};
+function handlePts(k){const b=boxes[k];if(!b)return[];   // corners of the VISIBLE part (big heroes run off the card, so their real corners are unreachable)
+  const x0=Math.max(b[0]-6,12),y0=Math.max(b[1]-6,12),x1=Math.min(b[0]+b[2]+6,W-12),y1=Math.min(b[1]+b[3]+6,H-12);return[[x0,y0],[x1,y0],[x0,y1],[x1,y1]];}
+function onHandle(x,y){if(!SEL)return false;return handlePts(SEL).some(([hx,hy])=>Math.abs(x-hx)<=14&&Math.abs(y-hy)<=14);}
+// what "size" means per element, and how to scale it
+function getSize(k){const o=C[k];return k==='hero'||k==='bgmoon'?o.r:('size' in o?o.size:('h' in o?o.h:1));}
+function setSize(k,v){const o=C[k];if(k==='hero'||k==='bgmoon')o.r=Math.max(30,v);else if(k==='wordmark'){o.h=Math.max(8,v);o.size=Math.max(8,v);}else if('size' in o)o.size=Math.max(6,v);else if('h' in o)o.h=Math.max(8,v);
+  if(k==='hero')syncHeroSize();}
+function centerOf(k){const b=boxes[k];return[b[0]+b[2]/2,b[1]+b[3]/2];}
+cv.addEventListener('pointerdown',e=>{const [x,y]=pt(e);
+  if(onHandle(x,y)&&SEL!=='rows'&&SEL!=='footer'){const [cx,cy]=centerOf(SEL);drag={k:SEL,resize:true,cx,cy,d0:Math.hypot(x-cx,y-cy)||1,s0:getSize(SEL),x,y,x0:x,y0:y};
+    cv.setPointerCapture(e.pointerId);cv.style.cursor='nwse-resize';return;}
+  const order=['icon','wordmark','label','badge','rows','avatar','handle','footer','hero','bgmoon'];
+  const hits=order.filter(k=>hit(k,x,y));if(!hits.length)return;
+  // Alt+click (or clicking the same spot again) cycles through stacked elements, e.g. hero -> moon behind it
+  if(Math.abs(cycle.x-x)<4&&Math.abs(cycle.y-y)<4&&e.altKey)cycle.i=(cycle.i+1)%hits.length;else cycle={x,y,i:e.altKey?Math.min(1,hits.length-1):0};
+  for(const k of [hits[cycle.i]]){{drag={k,x,y,x0:x,y0:y};cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';return;}}});
+cv.addEventListener('pointermove',e=>{if(!drag){const [x,y]=pt(e);cv.style.cursor=onHandle(x,y)?'nwse-resize':'grab';return;}
+  if(drag.resize){const [x,y]=pt(e);setSize(drag.k,drag.s0*Math.hypot(x-drag.cx,y-drag.cy)/drag.d0);render();return;}
+  const [x,y]=pt(e),dx=Math.round(x-drag.x),dy=Math.round(y-drag.y);drag.x+=dx;drag.y+=dy;
+  const o=C[drag.k];if(drag.k==='hero'){o.cx+=dx;o.cy+=dy;}else if(drag.k==='bgmoon'){o.dx+=dx;o.dy+=dy;}else{o.x+=dx;o.y+=dy;if('vx' in o)o.vx+=dx;}render();});
+cv.addEventListener('pointerup',()=>{if(!drag)return;const d=drag;drag=null;cv.style.cursor='grab';if(d.resize){buildEls();SEL=d.k;render();return;}
+  const moved=Math.abs(d.x-d.x0)+Math.abs(d.y-d.y0)>3; buildEls(); select(d.k, moved?null:d.y0);});
+// click an element on the card -> select it, open its settings and focus the field that edits it
+const QUICK_OF={label:'Token name',badge:'Headline',handle:'Handle',footer:'Ref code'};
+function select(k,clickY){SEL=k;render();
+  document.querySelectorAll('#els details').forEach(d=>{d.open=d.dataset.el===k;});
+  const det=document.querySelector(`#els details[data-el="${k}"]`);
+  let target=null, name=QUICK_OF[k];
+  if(k==='rows'&&clickY!=null){const r=C.rows;const n=Math.max(0,Math.min(r.items.length-1,Math.round((clickY-r.y)/r.gap)));name=['Ticker','Chain','Updated'][n];}
+  if(name){const lab=[...document.querySelectorAll('#quick .f label')].find(l=>l.textContent===name);if(lab)target=lab.nextElementSibling;}
+  if(k==='hero')target=document.getElementById('heroDrop');
+  if(k==='avatar')target=document.getElementById('avFile');
+  (target||det).scrollIntoView({behavior:'smooth',block:'center'});
+  if(target&&target.select){target.focus();target.select();}
+  for(const el of [target,det])if(el){el.style.transition='box-shadow .2s';el.style.boxShadow='0 0 0 2px #b48cff';setTimeout(()=>el.style.boxShadow='',1200);}}
+cv.addEventListener('dblclick',()=>{});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){SEL=null;render();return;}
+  if(!SEL||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!d)return;e.preventDefault();
+  const n=e.shiftKey?10:1,o=C[SEL];if(SEL==='hero'){o.cx+=d[0]*n;o.cy+=d[1]*n;}else if(SEL==='bgmoon'){o.dx+=d[0]*n;o.dy+=d[1]*n;}else{o.x+=d[0]*n;o.y+=d[1]*n;if('vx' in o)o.vx+=d[0]*n;}
+  render();clearTimeout(window._nt);window._nt=setTimeout(buildEls,300);});
+
+function fileImg(inp,key){inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{IM[key]=await loadImg(r.result);render();};r.readAsDataURL(f);};}
+function setHero(file){if(!file||!file.type.startsWith('image/'))return;const r=new FileReader();r.onload=async()=>{IM.hero=await loadImg(r.result);const t=document.getElementById('heroThumb');t.src=r.result;t.style.display='block';render();syncMode();};r.readAsDataURL(file);}
+document.getElementById('heroFile').onchange=e=>setHero(e.target.files[0]);
+for(const el of [document.getElementById('heroDrop'),cv]){
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('over');});
+  el.addEventListener('dragleave',()=>el.classList.remove('over'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('over');setHero(e.dataTransfer.files[0]);});}
+document.addEventListener('paste',e=>{for(const it of e.clipboardData.items)if(it.type.startsWith('image/')){setHero(it.getAsFile());break;}});fileImg(document.getElementById('avFile'),'avatar');
+document.getElementById('heroReset').onclick=()=>{IM.hero=null;document.getElementById('heroFile').value='';document.getElementById('heroThumb').style.display='none';render();};
+document.getElementById('dl').onclick=()=>{const a=document.createElement('a');a.download=(C.label.text||'card').replace(/[^\w$-]+/g,'_')+'_dexmoon.png';a.href=exportURL();a.click();};
+function nowUTC(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} · ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;}
+document.getElementById('nowBtn').onclick=()=>{C.rows.items[2][1]=nowUTC();render();buildPanel();};
+const TPL_KEY='dexmoon.templates.v1';
+function tplAll(){try{return JSON.parse(localStorage.getItem(TPL_KEY)||'{}');}catch(e){return {};}}
+function tplPut(all){try{localStorage.setItem(TPL_KEY,JSON.stringify(all));return true;}catch(e){alert('Could not save in this browser ('+e.name+'). Use Export instead - '+(e.name==='QuotaExceededError'?'images are too big for browser storage; save as "layout only".':''));return false;}}
+function layoutOnly(c){const o=JSON.parse(JSON.stringify(c));delete o.label.text;delete o.handle.text;delete o.footer.code;o.rows.items=o.rows.items.map(it=>[it[0]]);return o;}
+function applyTemplate(t){const base=JSON.parse(JSON.stringify(DEFAULT));const keep=JSON.parse(JSON.stringify(C));
+  C=deepMerge(base,JSON.parse(JSON.stringify(t.config)));
+  if(t.mode==='layout'){C.label.text=keep.label.text;C.handle.text=keep.handle.text;C.footer.code=keep.footer.code;
+    C.rows.items=C.rows.items.map((it,i)=>[it[0],(keep.rows.items[i]||[])[1]??'']);}
+  else{(async()=>{IM.hero=t.hero?await loadImg(t.hero):IM.hero;IM.avatar=t.avatar?await loadImg(t.avatar):IM.avatar;render();})();}
+  buildPanel();render();}
+function tplList(){const box=document.getElementById('tplList'),all=tplAll();box.innerHTML='';
+  const names=Object.keys(all).sort((a,b)=>(all[b].saved||0)-(all[a].saved||0));
+  if(!names.length){box.innerHTML='<p class="hint">No saved templates yet.</p>';return;}
+  for(const n of names){const t=all[n],d=document.createElement('div');d.className='tpl';
+    d.innerHTML=`<b title="${n.replace(/"/g,'&quot;')}"></b><small>${t.mode==='full'?'full':'layout'}</small>`;d.querySelector('b').textContent=n;
+    const L=document.createElement('button');L.textContent='Load';L.onclick=()=>{applyTemplate(t);document.getElementById('tplName').value=n;};
+    const D=document.createElement('button');D.className='ghost';D.textContent='⬇';D.title='download this template as a .json file (send it to the admin / bot)';D.onclick=()=>downloadTpl(n,t);
+    const U=document.createElement('button');U.className='ghost';U.textContent='Update';U.title='overwrite with the current card';U.onclick=()=>{saveTpl(n,t.mode);};
+    const X=document.createElement('button');X.className='ghost';X.textContent='✕';X.title='delete';X.onclick=()=>{if(confirm('Delete template "'+n+'"?')){const a=tplAll();delete a[n];tplPut(a);tplList();}};
+    d.append(L,D,U,X);box.appendChild(d);}}
+function saveTpl(name,mode){name=(name||'').trim();if(!name){alert('Give the template a name first.');return;}
+  const t={mode,saved:Date.now(),config:mode==='full'?JSON.parse(JSON.stringify(C)):layoutOnly(C)};
+  if(mode==='full'){if(IM.hero)t.hero=imgURL(IM.hero);if(IM.avatar)t.avatar=imgURL(IM.avatar);}
+  const all=tplAll();all[name]=t;if(tplPut(all)){tplList();const m=document.getElementById('tplSave');m.textContent='Saved ✓';setTimeout(()=>m.textContent='Save template',1200);}}
+function imgURL(img){if(img.src&&img.src.startsWith('data:'))return img.src;try{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);return c.toDataURL('image/png');}catch(e){return null;}}
+function downloadTpl(name,t){const f={dexmoonTemplates:1,templates:{[name]:t}};const a=document.createElement('a');
+  a.download=name.replace(/[^\w-]+/g,'_')+'.dexmoon.json';a.href=URL.createObjectURL(new Blob([JSON.stringify(f,null,1)],{type:'application/json'}));a.click();}
+document.getElementById('tplSaveDl').onclick=()=>{const n=document.getElementById('tplName').value.trim(),m=document.querySelector('input[name=tplMode]:checked').value;
+  saveTpl(n,m);const t=tplAll()[n];if(t)downloadTpl(n,t);};
+document.getElementById('tplSave').onclick=()=>saveTpl(document.getElementById('tplName').value,document.querySelector('input[name=tplMode]:checked').value);
+document.getElementById('tplName').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('tplSave').click();});
+// Export = every saved template (+ the current card as "current") in one file; Import accepts that file or an old single-preset file
+document.getElementById('saveCfg').onclick=()=>{const all=tplAll();all['(current card)']={mode:'layout',saved:Date.now(),config:layoutOnly(C)};
+  const a=document.createElement('a');a.download='dexmoon_templates.json';a.href=URL.createObjectURL(new Blob([JSON.stringify({dexmoonTemplates:1,templates:all},null,1)],{type:'application/json'}));a.click();};
+tplList();
+document.getElementById('loadCfgBtn').onclick=()=>document.getElementById('loadCfg').click();
+document.getElementById('loadCfg').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(txt=>{const j=JSON.parse(txt);
+  if(j.dexmoonTemplates){const all=tplAll();let n=0;for(const [k,v] of Object.entries(j.templates||{})){if(k==='(current card)')continue;all[k]=v;n++;}tplPut(all);tplList();alert('Imported '+n+' template(s).');}
+  else{C=deepMerge(JSON.parse(JSON.stringify(DEFAULT)),j);buildPanel();render();}
+  e.target.value='';});};
+document.getElementById('resetAll').onclick=()=>{C=JSON.parse(JSON.stringify(DEFAULT));IM.hero=IM.avatar=null;buildPanel();render();};
+function deepMerge(a,b){for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])&&a[k])deepMerge(a[k],b[k]);else a[k]=b[k];}return a;}
+
+// ---- automation hook: render.py calls window.dexCard({...}) then reads the PNG ----
+// simple fields: token, headline, ticker, chain, updated (or date+time), handle, refcode, site, promo, hero (data URL), avatar (data URL); any other key = full preset override
+// ---- colour schemes: one accent drives the badge, avatar, glow, moon tint and label tones ----
+function hex(h){h=h.replace('#','');return[0,2,4].map(i=>parseInt(h.substr(i,2),16));}
+function toHex(a){return'#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function mix(a,b,t){const A=hex(a),B=hex(b);return toHex(A.map((v,i)=>v+(B[i]-v)*t));}
+const THEMES={Dexmoon:'#563f6d', Midnight:'#2f4a8a', Ocean:'#1f6f86', Emerald:'#1f7a55', Gold:'#8a6a1f', Sunset:'#9a4a2a', Crimson:'#8a2433', Rose:'#8e3a6e', Mono:'#4a4a52', Neon:'#5b2bd6', Toxic:'#4e8a14', Ice:'#4a7fa6'};
+function applyTheme(acc,name){
+  const bg='#0f0e12';
+  if(name==='Dexmoon'){const d=JSON.parse(JSON.stringify(DEFAULT));for(const k of ['bg','moon'])C[k]=d[k];C.badge.fill=d.badge.fill;C.avatar.fill=d.avatar.fill;C.hero.edge=d.hero.edge;C.label.color=d.label.color;C.rows.key=d.rows.key;C.hero.ring=d.hero.ring;C.hero.glowColor=d.hero.glowColor;C.avatar.ring=d.avatar.ring;}
+  else{C.badge.fill=acc;C.avatar.fill=mix(acc,bg,.45);C.hero.edge=mix(acc,bg,.2);C.bg.color=mix(acc,bg,.94);C.bg.glow=mix(acc,bg,.72);
+    C.moon={c0:mix(acc,'#ffffff',.9),c1:mix(acc,'#ffffff',.68),c2:mix(acc,'#ffffff',.42),c3:mix(acc,'#ffffff',.12),crater:mix(acc,'#ffffff',.35)};
+    C.label.color=mix(acc,'#ffffff',.62);C.rows.key=mix(acc,'#ffffff',.5);C.hero.ring=mix(acc,'#ffffff',.45);C.hero.glowColor=mix(acc,'#ffffff',.25);C.avatar.ring=C.hero.ring;}
+  document.querySelectorAll('#themes button').forEach(b=>b.classList.toggle('on',b.dataset.n===name));
+  document.getElementById('accentPick').value=C.badge.fill;render();buildEls();}
+(function(){const box=document.getElementById('themes');for(const [n,a] of Object.entries(THEMES)){const b=document.createElement('button');b.dataset.n=n;
+  b.innerHTML='<i style="background:linear-gradient(90deg,'+a+','+mix(a,'#ffffff',.7)+')"></i>'+n;b.onclick=()=>applyTheme(a,n);box.appendChild(b);}
+  document.getElementById('accentPick').oninput=e=>applyTheme(e.target.value,'custom');})();
+
+// ---- fill from a Dexscreener / CoinMarketCap link (browser side) ----
+// Dexscreener's API allows browser calls. CoinMarketCap's does not, so a CMC link is resolved by searching Dexscreener for the coin's slug.
+// Token logos are loaded through images.weserv.nl, which adds the CORS header the canvas needs for PNG export.
+const CHAINS={solana:'Solana',ethereum:'Ethereum',base:'Base',bsc:'BNB Chain',arbitrum:'Arbitrum',polygon:'Polygon',avalanche:'Avalanche',optimism:'Optimism',sui:'Sui',ton:'TON',tron:'Tron',blast:'Blast',hyperliquid:'Hyperliquid',hyperevm:'HyperEVM',abstract:'Abstract',sonic:'Sonic',berachain:'Berachain',linea:'Linea',zksync:'zkSync',mantle:'Mantle',aptos:'Aptos',near:'NEAR',pulsechain:'PulseChain',cronos:'Cronos'};
+async function ds(path){const r=await fetch('https://api.dexscreener.com'+path);if(!r.ok)throw new Error('dexscreener '+r.status);return r.json();}
+function best(pairs){pairs=(pairs||[]).filter(p=>p.baseToken);return pairs.sort((a,b)=>((b.liquidity||{}).usd||0)-((a.liquidity||{}).usd||0))[0];}
+function twHandle(soc){for(const x of soc||[]){const m=String(x.url||'').match(/(?:twitter\.com|x\.com)\/@?([A-Za-z0-9_]{1,15})/);if(m&&!['i','home','search','intent'].includes(m[1].toLowerCase()))return m[1];}return null;}
+async function lookupLink(url){
+  let m=url.match(/dexscreener\.com\/([a-z0-9]+)\/([A-Za-z0-9]+)/i), p=null;
+  if(m){const d=await ds(`/latest/dex/pairs/${m[1].toLowerCase()}/${m[2]}`);p=d.pair||best(d.pairs);if(!p)p=best((await ds('/latest/dex/tokens/'+m[2])).pairs);}
+  else if((m=url.match(/coinmarketcap\.com\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?currencies\/([A-Za-z0-9-]+)/i))){
+    const slug=m[1].toLowerCase(),d=await ds('/latest/dex/search?q='+encodeURIComponent(slug.replace(/-/g,' ')));
+    const want=slug.replace(/-/g,'');const hits=(d.pairs||[]).filter(x=>x.baseToken&&(x.baseToken.name.toLowerCase().replace(/[^a-z0-9]/g,'')===want||x.baseToken.symbol.toLowerCase()===want));
+    p=best(hits.length?hits:d.pairs);}
+  else throw new Error('paste a dexscreener.com or coinmarketcap.com link');
+  if(!p)throw new Error('no trading pair found for that link');
+  const info=p.info||{};return{token:p.baseToken.name,ticker:p.baseToken.symbol.replace(/^\$/,''),chain:CHAINS[p.chainId]||(p.chainId[0].toUpperCase()+p.chainId.slice(1)),handle:twHandle(info.socials),logo:info.imageUrl||null};}
+function loadCors(src){return new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});}
+document.getElementById('fillBtn').onclick=async()=>{const msg=document.getElementById('fillMsg'),url=document.getElementById('coinLink').value.trim();
+  msg.textContent='looking up...';
+  try{const f=await lookupLink(url);
+    C.label.text=f.token;C.rows.items[0][1]='$'+f.ticker;C.rows.items[1][1]=f.chain;if(f.handle)C.handle.text='@'+f.handle;C.rows.items[2][1]=nowUTC();
+    let note=f.handle?'':' (no X handle listed - fill it in)';
+    if(document.getElementById('usePfp').checked){let av=null;
+      if(f.handle)av=await loadCors('https://unavatar.io/x/'+encodeURIComponent(f.handle)+'?fallback=false');
+      if(!av&&f.logo)av=await loadCors('https://images.weserv.nl/?url='+encodeURIComponent(f.logo)+'&w=256&h=256&fit=cover&output=png');
+      if(av)IM.avatar=av;else note+=' (no pfp found - drop one in)';}
+    if(f.logo&&document.getElementById('useLogo').checked){const i=await loadCors('https://images.weserv.nl/?url='+encodeURIComponent(f.logo)+'&w=1024&h=1024&fit=inside&output=png');
+      if(i){IM.hero=i;const t=document.getElementById('heroThumb');t.src=i.src;t.style.display='block';}else note+=' (logo could not be loaded - drop it in manually)';}
+    buildPanel();render();msg.textContent='Filled: '+f.token+' $'+f.ticker+' on '+f.chain+note;}
+  catch(e){msg.textContent='Could not fill: '+e.message;}};
+document.getElementById('coinLink').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('fillBtn').click();});
+
+window.dexCard=async(o={})=>{C=JSON.parse(JSON.stringify(DEFAULT));if(o.preset)deepMerge(C,o.preset);   // template first, THEN the colour scheme on top (it was the other way round, so the template's colours always won)
+  if(o.theme){const a=THEMES[o.theme]||o.theme;applyTheme(a,THEMES[o.theme]?o.theme:'custom');}
+  if(o.token!=null)C.label.text=o.token; if(o.headline!=null)C.badge.text=o.headline;
+  if(o.ticker!=null)C.rows.items[0][1]='$'+String(o.ticker).replace(/^\$+/,''); if(o.chain!=null)C.rows.items[1][1]=o.chain;
+  C.rows.items[2][1]=o.updated||((o.date&&o.time)?`${o.date} · ${o.time} UTC`:nowUTC());
+  if(o.handle!=null)C.handle.text=(o.handle.startsWith('@')?'':'@')+o.handle; if(o.refcode!=null)C.footer.code=o.refcode;
+  if(o.heroSize!=null)C.hero.r=330*parseFloat(o.heroSize)/100;
+  if(o.mode)C.hero.mode=String(o.mode).toLowerCase();
+  // automation: anything not supplied is hidden instead of printing a [PLACEHOLDER]
+  if(o.handle==null||String(o.handle).trim()===''){C.handle.show=false;C.avatar.show=!!o.avatar;}
+  if(o.refcode==null||String(o.refcode).trim()===''){C.footer.code='';C.footer.promo=C.footer.promo.replace(/\s*·\s*code\s*$/i,'');}
+  if(o.site!=null)C.footer.site=o.site; if(o.promo!=null)C.footer.promo=o.promo;
+  IM.hero=o.hero?await loadImg(o.hero):null; IM.avatar=o.avatar?await loadImg(o.avatar):null;
+  await document.fonts.ready; SEL=null; render(); buildPanel(); return exportURL(o.scale||2);};
+
+(async()=>{[IM.icon,IM.lockup]=await Promise.all([loadImg(LOGO_ICON),loadImg(LOGO_LOCKUP)]);await document.fonts.load("700 60px 'IBM Plex Mono'");await document.fonts.load("500 20px 'JetBrains Mono'");
+  await document.fonts.load("400 20px Inter");await document.fonts.load("700 20px Inter");await document.fonts.ready;buildPanel();render();window.dexReady=true;})();
+</script>
+</body>
+</html>

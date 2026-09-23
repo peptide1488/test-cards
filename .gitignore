@@ -1,0 +1,6 @@
+bot_token.txt
+bot_config.json
+bot_log.txt
+__pycache__/
+*.pyc
+.env
