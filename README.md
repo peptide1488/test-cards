@@ -5,7 +5,7 @@ Telegram bot that makes Dexmoon "DEX PAID" cards. Users walk through a button wi
 and get the card as a photo + full-size 2400x1350 PNG.
 
 The card is rendered by `index.html` - the same page as the web editor
-(https://peptide1488.github.io/dexmoon-card/) - driven headlessly by Playwright/Chromium,
+(https://peptide1488.github.io/test-cards-web/) - driven headlessly by Playwright/Chromium,
 so the bot and the web tool always look identical.
 
 User guide: [USER_GUIDE.md](USER_GUIDE.md)

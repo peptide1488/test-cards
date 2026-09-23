@@ -27,7 +27,7 @@ Commands: `/start` or `/card` makes a card · `/cancel` stops · `/themes` lists
 
 ## Web editor
 
-Open **https://peptide1488.github.io/dexmoon-card/**. It works in any browser, with nothing to install.
+Open **https://peptide1488.github.io/test-cards-web/**. It works in any browser, with nothing to install.
 
 - **Fill from link:** paste a Dexscreener / CMC link in *Link* and press **Fill from link**.
 - **Hero image:** drop an image on the dashed box (or straight onto the card), or paste it with Ctrl+V.
